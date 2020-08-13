@@ -14,7 +14,7 @@ This repository helps to run tle directly in the heroku. For more information ab
 6. Now enter `heroku create` command in the terminal and hit enter. It will create a new app for you. Remember the name.
 7. Now you need to add two buildpacks to deploy. The APT buildpack to install essential APT files and Python buildpack to install essential packages.
 8. To add APT buildpack type the following command `heroku buildpacks:add heroku-community/apt`.
-9. To add Python buldpack type the following command `heroku buildpacks:add heroku/python`.
+9. To add Python buildpack type the following command `heroku buildpacks:add heroku/python`.
     > **Note**: the order of adding the buildpacks is important.
 10. Now go to the personal dashboard [page](https://dashboard.heroku.com/apps) of heroku on your browser.
 11. Next click on the app you created in step 6.
