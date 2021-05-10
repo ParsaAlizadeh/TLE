@@ -111,11 +111,15 @@ class UserDbConn:
                 "rating"	INTEGER NOT NULL
             );
         ''')
+
+        cur.execute(''' ALTER TABLE IF EXISTS duel ALTER COLUMN "challenger" TYPE BIGINT; ''')
+        cur.execute(''' ALTER TABLE IF EXISTS duel ALTER COLUMN "challengee" TYPE BIGINT; ''')
+        
         cur.execute('''
             CREATE TABLE IF NOT EXISTS duel (
                 "id"	        SERIAL PRIMARY KEY,
-                "challenger"	INTEGER NOT NULL,
-                "challengee"	INTEGER NOT NULL,
+                "challenger"	BIGINT NOT NULL,
+                "challengee"	BIGINT NOT NULL,
                 "issue_time"	REAL NOT NULL,
                 "start_time"	REAL,
                 "finish_time"	REAL,
@@ -127,6 +131,8 @@ class UserDbConn:
                 "type"		    INTEGER
             );
         ''')
+        
+
         cur.execute('''
             CREATE TABLE IF NOT EXISTS "challenge" (
                 "id"	        SERIAL PRIMARY KEY,
@@ -722,8 +728,7 @@ class UserDbConn:
 
     def start_duel(self, duelid, start_time):
         query = f'''
-            UPDATE duel SET start_time = %s, status = {Duel.ONGOING};
-            WHERE id = %s AND status = {Duel.PENDING};
+            UPDATE duel SET start_time = %s, status = {Duel.ONGOING} WHERE id = %s AND status = {Duel.PENDING};
         '''
         cur = self.conn.cursor()
         cur.execute(query, (start_time, duelid))
