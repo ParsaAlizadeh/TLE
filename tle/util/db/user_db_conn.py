@@ -991,6 +991,7 @@ class UserDbConn:
             cur = self.conn.cursor()
             cur.execute(query, (contest_id, start_time, finish_time, RatedVC.ONGOING, guild_id))
             id = cur.lastrowid
+            self.conn.commit()
             for user_id in user_ids:
                 query = ('INSERT INTO rated_vc_users '
                          '(vc_id, user_id) '
