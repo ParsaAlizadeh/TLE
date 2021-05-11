@@ -985,13 +985,11 @@ class UserDbConn:
         """
         query = ('INSERT INTO rated_vcs '
                  '(contest_id, start_time, finish_time, status, guild_id) '
-                 'VALUES ( %s, %s, %s, %s, CAST(%s AS TEXT));')
+                 'VALUES ( %s, %s, %s, %s, CAST(%s AS TEXT)) RETURNING id;')
         id = None
         with self.conn:
+            id, = self._fetchone(query, (contest_id, start_time, finish_time, RatedVC.ONGOING, guild_id))
             cur = self.conn.cursor()
-            cur.execute(query, (contest_id, start_time, finish_time, RatedVC.ONGOING, guild_id))
-            id = cur.lastrowid
-            self.conn.commit()
             for user_id in user_ids:
                 query = ('INSERT INTO rated_vc_users '
                          '(vc_id, user_id) '
