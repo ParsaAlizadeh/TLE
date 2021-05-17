@@ -952,7 +952,7 @@ class UserDbConn:
     def has_auto_role_update_enabled(self, guild_id):
         query = ('SELECT 1 '
                  'FROM auto_role_update '
-                 'WHERE guild_id = CAST(%s AS INTEGER);')
+                 'WHERE guild_id = CAST(%s AS TEXT);')
         cur = self.conn.cursor()
         cur.execute(query, (guild_id,))
         return cur.fetchone() is not None
