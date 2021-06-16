@@ -164,7 +164,7 @@ class HOI(commands.Cog):
         if tags:
             problems = [prob for prob in problems if prob.tag_matches(tags)]
         if not_tags:
-            problems = [prob for prob in problems if not any(prob.tags_match([tag]) for tag in not_tags)]
+            problems = [prob for prob in problems if not any(prob.tag_matches([tag]) for tag in not_tags)]
 
         problems.sort(key=priority.cnt)
         problems.reverse()
