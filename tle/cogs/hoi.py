@@ -124,7 +124,7 @@ class HOI(commands.Cog):
             embed.add_field(name='Matched tags', value=tagslist)
         await ctx.send(f'Recommended problem for `{handle}`', embed=embed)
 
-    @hoi.command(brief='Create a (good) mashup', usage='name [lower:upper] [handles] [+tags]')
+    @hoi.command(brief='Create a (good) mashup', usage='name [lower:upper] [handles] [+tags] [~tags]')
     async def bestlist(self, ctx, name: str, *args):
         """Create a mashup contest using problems with maximum solved by list members."""
 
