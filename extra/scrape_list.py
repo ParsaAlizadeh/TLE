@@ -5,6 +5,7 @@ import json
 
 session = requests.Session()
 
+
 def query_page(url):
     with session.get(url) as resp:
         html_raw = resp.text
@@ -22,6 +23,7 @@ def query_page(url):
             result.append([problem_id, cnt])
     return result
 
+
 def page_counts(url):
     with session.get(url) as resp:
         html_raw = resp.text
@@ -29,7 +31,7 @@ def page_counts(url):
         page_div = soup.find_all("ul")[-1]
         page_num = page_div.find_all("span", {"class": "page-index"})[-1].text
         return int(page_num)
-    return 0
+
 
 def main():
     if len(sys.argv) < 3:
@@ -60,6 +62,7 @@ def main():
     print(f"Move {name}.json into data/list/ directory")
 
     session.close()
+
 
 if __name__ == "__main__":
     main()
