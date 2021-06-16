@@ -135,8 +135,9 @@ class HOI(commands.Cog):
             embed = discord_common.cf_color_embed(description=desc)
             return title, embed
 
-        handles = [arg for arg in args if arg[0] != '+' and ":" not in arg]
+        handles = [arg for arg in args if arg[0] != '+' and arg[0] != '~' and ":" not in arg]
         tags = [arg[1:] for arg in args if arg[0] == '+' and len(arg) > 1]
+        not_tags = [arg[1:] for arg in args if arg[0] == '~' and len(arg) > 1]
 
         rate_range = [arg for arg in args if ":" in arg]
         if len(rate_range) > 1:
@@ -162,6 +163,9 @@ class HOI(commands.Cog):
                     and priority.has(prob)]
         if tags:
             problems = [prob for prob in problems if prob.tag_matches(tags)]
+        if not_tags:
+            for tag in not_tags:
+                problems = [prob for prob in problems if not prob.tag_matches([tag])]
         problems.sort(key=priority.cnt)
         problems.reverse()
 
