@@ -1,8 +1,7 @@
 import datetime
 import random
 from typing import List
-import math
-import time
+import json
 import re
 from collections import defaultdict
 
@@ -23,19 +22,17 @@ _GITGUD_SCORE_DISTRIB = (2, 3, 5, 8, 12, 17, 23)
 _GITGUD_MAX_ABS_DELTA_VALUE = 300
 
 
-def _get_problem_id(problem):
-    return f"{problem.contestId}{problem.index}"
+def _load_list(name, cutoff):
+    class Wrapper(dict):
+        def cnt(self, prob: cf.Problem):
+            return self[prob.contest_identifier]
 
-
-def _get_list_count(name, cutoff):
-    count = {}
-    with open(f"data/list/{name}.csv", "r") as file:
-        for line in file.readlines():
-            problem_id, cnt = line.split(',')
-            cnt = int(cnt)
-            if cnt >= cutoff:
-                count[problem_id] = cnt
-    return count
+        def has(self, prob: cf.Problem):
+            return prob.contest_identifier in self
+    with open(f'data/list/{name}.json', 'r') as file:
+        priority = json.load(file)
+        priority = {prob: cnt for prob, cnt in priority.items() if cnt >= cutoff}
+        return Wrapper(priority)
 
 
 class CodeforcesCogError(commands.CommandError):
@@ -204,29 +201,28 @@ class Codeforces(commands.Cog):
             else:
                 tags.append(arg)
 
-        count = _get_list_count(name, cutoff)
+        # count = _get_list_count(name, cutoff)
+        priority = _load_list(name, cutoff)
+
         submissions = await cf.user.status(handle=handle)
         solved = {sub.problem.name for sub in submissions if sub.verdict == 'OK'}
 
         problems = [prob for prob in cf_common.cache2.problem_cache.problems
-                    if prob.rating == rating and prob.name not in solved and
-                    _get_problem_id(prob) in count.keys()]
+                    if prob.rating == rating and prob.name not in solved and priority.has(prob)]
         if tags:
             problems = [prob for prob in problems if prob.tag_matches(tags)]
 
         if not problems:
             raise CodeforcesCogError('Problems not found within the search parameters')
 
-        problems.sort(key=lambda problem: count[_get_problem_id(problem)])
-
+        problems.sort(key=priority.cnt)
         choice = max([random.randrange(len(problems)) for _ in range(4)])
         problem = problems[choice]
-
-        cnt = count[f"{problem.contestId}{problem.index}"]
+        cnt = priority.cnt(problem)
         await ctx.send(f"{cnt} people solved this !!!")
-        await ctx.send(f"valid problems = {len(problems)}, "
-                       f"min solved = {count[_get_problem_id(problems[0])]}, "
-                       f"max solved = {count[_get_problem_id(problems[-1])]}")
+        await ctx.send(f"valid problems: {len(problems)}, "
+                       f"min solved: {priority.cnt(problems[0])}, "
+                       f"max solved: {priority.cnt(problems[-1])}")
 
         title = f'{problem.index}. {problem.name}'
         desc = cf_common.cache2.contest_cache.get_contest(problem.contestId).name
@@ -321,12 +317,11 @@ class Codeforces(commands.Cog):
 
     @commands.command(brief='Create a (good) mashup', usage='name lower:upper [handles] [+tags]')
     async def bestlist(self, ctx, name: str, *args):
-        """Create a mashup contest using problems with maximum solved by list members.
-        """
+        """Create a mashup contest using problems with maximum solved by list members."""
 
         def make_page(chunk, title):
-            nonlocal count
-            desc = '\n'.join(f'[{p.name}]({p.url}) [{p.rating}] {count[_get_problem_id(p)]}x'
+            nonlocal priority
+            desc = '\n'.join(f'[{p.name}]({p.url}) [{p.rating}] {priority.cnt(p)}x'
                              for i, p in enumerate(chunk))
             embed = discord_common.cf_color_embed(description=desc)
             return title, embed
@@ -340,7 +335,7 @@ class Codeforces(commands.Cog):
         lower = int(lower) if lower else 0
         upper = int(upper) if upper else 9999
 
-        count = _get_list_count(name, 0)
+        priority = _load_list(name, 0)
         handles = handles or ('!' + str(ctx.author),)
         handles = await cf_common.resolve_handles(ctx, self.converter, handles)
 
@@ -351,10 +346,10 @@ class Codeforces(commands.Cog):
                     if lower <= prob.rating <= upper and prob.name not in solved
                     and not any(cf_common.is_contest_writer(prob.contestId, handle) for handle in handles)
                     and not cf_common.is_nonstandard_problem(prob)
-                    and _get_problem_id(prob) in count.keys()]
+                    and priority.has(prob)]
         if tags:
             problems = [prob for prob in problems if prob.tag_matches(tags)]
-        problems.sort(key=lambda problem: count[_get_problem_id(problem)])
+        problems.sort(key=priority.cnt)
         problems.reverse()
 
         title = f"Found {len(problems)} valid problem for `{'`, `'.join(handles)}`"
