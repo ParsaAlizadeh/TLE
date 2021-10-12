@@ -57,7 +57,7 @@ def main():
 
     counts = {p[0]: p[1] for p in counts}
     with open(f"{name}.json", "w") as file:
-        json.dump(counts, file, indent=4)
+        json.dump(counts, file, indent=None, separators=(',', ':'))
 
     print(f"Move {name}.json into data/list/ directory")
 
