@@ -193,7 +193,7 @@ class HOI(commands.Cog):
     async def bestlist(self, ctx, name: str, *args):
         """Create a mashup contest using problems with maximum solved by list members.
 
-        For tags and solved-by, you can use "~" as prefix to exclude.
+        For tags and solved-by, you can use "~" as prefix to exclude. Order of arguments doesn't matter.
 
         Example:
         ;hoi bestlist inoi from 2000 to 2300 tags tree,dp,~data for Keshi,AmShZ solvedBy tourist,Benq,~Um_nik
