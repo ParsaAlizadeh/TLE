@@ -29,6 +29,69 @@ def _load_list(name, cutoff):
         return Wrapper(priority)
 
 
+_predicates = {}
+def dispatch(command):
+    def decorator(f):
+        _predicates[command] = f
+        return f
+    return decorator
+
+class BestlistPredicates:
+    @staticmethod
+    @dispatch("from")
+    async def from_rating(rating):
+        return lambda problem: problem.rating >= int(rating)
+
+    @staticmethod
+    @dispatch("to")
+    async def to_rating(rating):
+        return lambda problem: problem.rating <= int(rating)
+
+    @staticmethod
+    @dispatch("tags")
+    async def tag_filter(tags):
+        tags = tags.split(',')
+        not_tags = filter(lambda s: s[0] == '~', tags)
+        not_tags = list(map(lambda s: s[1:], not_tags))
+        tags = list(filter(lambda s: s[0] != '~', tags))
+        return lambda problem: (
+            problem.tag_matches(tags) and
+            not any(problem.tag_matches([tag]) for tag in not_tags)
+        )
+
+    @staticmethod
+    @dispatch("solvedBy")
+    async def solve_filter(handles):
+        handles = handles.split(',')
+        not_handles = filter(lambda s: s[0] == '~', handles)
+        not_handles = list(map(lambda s: s[1:], not_handles))
+        handles = list(filter(lambda s: s[0] != '~', handles))
+
+        async def get_accepted(handle):
+            subs = await cf.user.status(handle=handle)
+            subs = filter(lambda s: s.verdict == 'OK', subs)
+            subs = map(lambda s: s.problem.name, subs)
+            return set(subs)
+
+        accepted = {
+            handle: await get_accepted(handle)
+            for handle in handles + not_handles
+        }
+
+        return lambda problem: (
+            all(problem.name in accepted[handle] for handle in handles) and
+            not any(problem.name in accepted[handle] for handle in not_handles)
+        )
+
+    @staticmethod
+    @dispatch("for")
+    async def for_handles(handles):
+        handles = handles.split(',')
+        handles = map(lambda s: '~'+s, handles)
+        str_handles = ','.join(handles)
+        return await BestlistPredicates.solve_filter(str_handles)
+
+
 class HOI(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -125,9 +188,16 @@ class HOI(commands.Cog):
         await ctx.send(f'Recommended problem for `{handle}`', embed=embed)
 
     @hoi.command(brief='Create a (good) mashup',
-                 usage='name [lower:upper] [handles] [+tags] [~tags]')
+                 usage='listName [from <rating>] [to <rating>] '
+                       '[tags <tags>] [for <handles>] [solvedBy <handles>]')
     async def bestlist(self, ctx, name: str, *args):
-        """Create a mashup contest using problems with maximum solved by list members."""
+        """Create a mashup contest using problems with maximum solved by list members.
+
+        For tags and solved-by, you can use "~" as prefix to exclude.
+
+        Example:
+        ;hoi bestlist inoi from 2000 to 2300 tags tree,dp,~data for Keshi,AmShZ solvedBy tourist,Benq,~Um_nik
+        """
 
         def make_page(chunk, title):
             nonlocal priority
@@ -136,37 +206,32 @@ class HOI(commands.Cog):
             embed = discord_common.cf_color_embed(description=desc)
             return title, embed
 
-        handles = [arg for arg in args if arg[0] != '+' and arg[0] != '~' and ":" not in arg]
-        tags = [arg[1:] for arg in args if arg[0] == '+' and len(arg) > 1]
-        not_tags = [arg[1:] for arg in args if arg[0] == '~' and len(arg) > 1]
+        try:
+            priority = _load_list(name, 0)
+        except:
+            raise HOICogError(
+                f"List `{name}` not found. Check syntax in `;help hoi bestlist`"
+            )
+        problems = [
+            prob for prob in cf_common.cache2.problem_cache.problems
+            if not cf_common.is_nonstandard_problem(prob)
+            and priority.has(prob)
+        ]
 
-        rate_range = [arg for arg in args if ":" in arg]
-        if len(rate_range) > 1:
-            raise HOICogError('More than one lower:upper')
-        if not rate_range:
-            rate_range = [':']
+        if len(args) % 2 == 1:
+            raise HOICogError(
+                "Odd number of arguments. Check syntax in `;help hoi bestlist`"
+            )
 
-        lower, upper = rate_range[0].split(":")
-        lower = int(lower) if lower else 0
-        upper = int(upper) if upper else 9999
-
-        priority = _load_list(name, 0)
-        handles = handles or ('!' + str(ctx.author),)
-        handles = await cf_common.resolve_handles(ctx, self.converter, handles)
-
-        resp = [await cf.user.status(handle=handle) for handle in handles]
-        submissions = [sub for user in resp for sub in user]
-        solved = {sub.problem.name for sub in submissions}
-        problems = [prob for prob in cf_common.cache2.problem_cache.problems
-                    if lower <= prob.rating <= upper and prob.name not in solved
-                    and not any(cf_common.is_contest_writer(prob.contestId, handle) for handle in handles)
-                    and not cf_common.is_nonstandard_problem(prob)
-                    and priority.has(prob)]
-        if tags:
-            problems = [prob for prob in problems if prob.tag_matches(tags)]
-        if not_tags:
-            problems = [prob for prob in problems
-                        if not any(prob.tag_matches([tag]) for tag in not_tags)]
+        for i in range(0, len(args), 2):
+            pred, arg = args[i:i+2]
+            if pred not in _predicates:
+                raise HOICogError(
+                    f"Predicate `{pred}` not defined. Check syntax in `;help hoi bestlist`"
+                )
+            pred = await _predicates[pred](arg)
+            problems = filter(pred, problems)
+        problems = list(problems)
 
         if not problems:
             raise HOICogError('Problems not found within the search parameters')
@@ -174,9 +239,15 @@ class HOI(commands.Cog):
         problems.sort(key=priority.cnt)
         problems.reverse()
 
-        title = f"Found {len(problems)} valid problem for `{'`, `'.join(handles)}`"
+        title = f"Found {len(problems)} valid problem"
         pages = [make_page(chunk, title) for chunk in paginator.chunkify(problems, 20)]
-        paginator.paginate(self.bot, ctx.channel, pages, wait_time=5 * 60, set_pagenum_footers=True)
+        paginator.paginate(
+            self.bot,
+            ctx.channel,
+            pages,
+            wait_time=5 * 60,
+            set_pagenum_footers=True
+        )
 
     @discord_common.send_error_if(HOICogError, cf_common.ResolveHandleError, cf_common.FilterError)
     async def cog_command_error(self, ctx, error):
