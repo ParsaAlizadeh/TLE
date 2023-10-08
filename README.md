@@ -1,13 +1,15 @@
+**8 Oct 2023:**
+I archived this repository, because [Heroku decided to stop supporting free tier and free plan for Postgres](https://blog.heroku.com/next-chapter).
+The setup here might still be usable, but I won't maintain it anymore.
+
+**6 Apr 2021:**
+The master branch is almost deprecated. Heroku files can be used again, but if you are looking for ready-to-use version, you can see [fishy15/TLE
+](https://github.com/fishy15/TLE/tree/heroku) or [hoi branch](https://github.com/ParsaAlizadeh/TLE/tree/hoi) (customized TLE).
+
 # TLE (+ Heroku)
 
 This repository helps to run TLE directly in the heroku. For more information about TLE, check the [main repository](https://github.com/cheran-senthil/TLE).
 
-## Note
-
-The master branch is almost deprecated. Heroku files can be used again, but if you are looking for ready-to-use version, you can see [fishy15/TLE
-](https://github.com/fishy15/TLE/tree/heroku) or [hoi branch](https://github.com/ParsaAlizadeh/TLE/tree/hoi) (customized TLE).
-
----
 
 ## Steps for hosting a bot for your own server using Heroku.
 
