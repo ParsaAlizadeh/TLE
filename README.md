@@ -4,7 +4,8 @@ This repository helps to run TLE directly in the heroku. For more information ab
 
 ## Note
 
-The master branch is almost deprecated. Heroku files can be used again, but if you are looking for ready-to-use version, you can see [fishy15/TLE](https://github.com/fishy15/TLE) or [hoi branch](https://github.com/ParsaAlizadeh/TLE/tree/hoi) (customized TLE).
+The master branch is almost deprecated. Heroku files can be used again, but if you are looking for ready-to-use version, you can see [fishy15/TLE
+](https://github.com/fishy15/TLE/tree/heroku) or [hoi branch](https://github.com/ParsaAlizadeh/TLE/tree/hoi) (customized TLE).
 
 ---
 
